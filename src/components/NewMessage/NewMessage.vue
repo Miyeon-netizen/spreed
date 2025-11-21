@@ -47,6 +47,19 @@
 				<NewMessageChatSummary v-if="!dialog && showChatSummary" />
 
 				<div class="new-message-form__emoji-picker">
+					<div v-if="showStickerPicker" v-click-outside="closeStickerPicker" class="sticker-picker-container">
+						<StickerPicker @select="handleStickerSelect" />
+					</div>
+					<NcButton
+						:disabled="disabled"
+						variant="tertiary"
+						:aria-label="t('spreed', 'Add sticker')"
+						:aria-haspopup="true"
+						@click="toggleStickerPicker">
+						<template #icon>
+							<IconSticker :size="20" />
+						</template>
+					</NcButton>
 					<NcEmojiPicker
 						v-if="!disabled"
 						keep-open
@@ -216,8 +229,10 @@ import IconClose from 'vue-material-design-icons/Close.vue'
 import IconEmoticonOutline from 'vue-material-design-icons/EmoticonOutline.vue'
 import IconForumOutline from 'vue-material-design-icons/ForumOutline.vue'
 import IconSend from 'vue-material-design-icons/Send.vue' // Filled for better indication
+import IconSticker from 'vue-material-design-icons/StickerEmoji.vue'
 import MessageQuote from '../MessageQuote.vue'
 import NewMessageAbsenceInfo from './NewMessageAbsenceInfo.vue'
+import StickerPicker from './StickerPicker.vue'
 import NewMessageAttachments from './NewMessageAttachments.vue'
 import NewMessageAudioRecorder from './NewMessageAudioRecorder.vue'
 import NewMessageChatSummary from './NewMessageChatSummary.vue'
@@ -271,6 +286,8 @@ export default {
 		IconEmoticonOutline,
 		IconForumOutline,
 		IconSend,
+		IconSticker,
+		StickerPicker,
 	},
 
 	props: {
@@ -359,6 +376,7 @@ export default {
 			errorTitle: '',
 			errorMessage: '',
 			silentChat: false,
+			showStickerPicker: false,
 			// True when the audio recorder component is recording
 			isRecordingAudio: false,
 			showNewFileDialog: -1,
@@ -1092,6 +1110,33 @@ export default {
 				this.toggleSilentChat()
 			}
 		},
+
+		toggleStickerPicker() {
+			this.showStickerPicker = !this.showStickerPicker
+		},
+
+		closeStickerPicker() {
+			this.showStickerPicker = false
+		},
+
+		async handleStickerSelect(sticker) {
+			this.showStickerPicker = false
+			const stickerText = `![${sticker.name}](${sticker.url})`
+
+			const temporaryMessagePayload = {
+				message: stickerText,
+				token: this.token,
+				silent: this.silentChat,
+			}
+
+			if (this.threadId) {
+				temporaryMessagePayload.threadId = this.threadId
+				temporaryMessagePayload.isThread = true
+			}
+
+			const temporaryMessage = this.createTemporaryMessage(temporaryMessagePayload)
+			this.$store.dispatch('postNewMessage', { token: this.token, temporaryMessage })
+		},
 	},
 }
 </script>
@@ -1119,12 +1164,22 @@ export default {
 		bottom: var(--border-width-input-focused, 2px);
 		inset-inline-start: var(--border-width-input-focused, 2px);
 		z-index: 1;
+		display: flex;
+		gap: 4px;
 
 		:deep(.button-vue) {
 			// Overwrite NcButton styles to fit inside NcRichContenteditable
 			--button-size: var(--emoji-button-size) !important;
 			--button-radius: var(--emoji-button-radius) !important;
 		}
+	}
+
+	.sticker-picker-container {
+		position: absolute;
+		bottom: 100%;
+		left: 0;
+		margin-bottom: 5px;
+		z-index: 100;
 	}
 
 	&__input {
@@ -1138,7 +1193,7 @@ export default {
 		--contenteditable-space: calc((var(--default-clickable-area) - 1lh - 4px) / 2);
 		--contenteditable-block-offset: var(--contenteditable-space);
 		--contenteditable-inline-end-offset: var(--contenteditable-space);
-		--contenteditable-inline-start-offset: calc(var(--emoji-button-size) + var(--contenteditable-space));
+		--contenteditable-inline-start-offset: calc(var(--emoji-button-size) * 2 + var(--contenteditable-space) + 4px);
 	}
 
 	&__quote {

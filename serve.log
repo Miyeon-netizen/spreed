@@ -1,0 +1,5 @@
+
+> talk@23.0.0-dev.0 serve
+> NODE_ENV=development rspack serve
+
+Building talk 23.0.0-dev.0
